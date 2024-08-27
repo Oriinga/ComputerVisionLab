@@ -27,8 +27,16 @@ class Stat_Classifier:
     def __init__(self,image) -> None:
         self.image = image
         pass
-    def classify(self,validation_features,fg_features,bg_features):
+    def classify(self,image_features,fg_features,bg_features):
+        """
+        Multiplies two numbers and returns the result.
 
+        Args:
+            image_features : The features for whole image.
+
+        Returns:
+            vector (2d): the predictions per pixel.
+        """
         fg_feature_matrix = np.stack(fg_features, axis=-1)
         fg_mean_vector = np.mean(fg_feature_matrix, axis=0)
         fg_cov_matrix = np.cov(fg_feature_matrix, rowvar=False)
@@ -45,7 +53,7 @@ class Stat_Classifier:
         print("bg cov shape",bg_cov_matrix.shape)
         
         
-        reshaped_features = validation_features.T
+        reshaped_features = image_features.T
         
         
         ####### vector of predictions #######
@@ -59,14 +67,12 @@ class Stat_Classifier:
     
     def foreground_given_pixel(self,x,fg_mean, fg_cov, bg_mean, bg_cov,mask,image):
         """
-        This function does something interesting.
-
-        Parameters:
-        mask (2d array): Remember to binarize it.
-        image (type):the original image.
+        Args:
+            mask (2d array): Remember to binarize it.
+            image (type):the original image.
 
         Returns:
-        type: probability.
+            type: probability.
         """
         N = image.shape[0]*image.shape[1]
         N_fg = np.sum(mask)
@@ -80,14 +86,12 @@ class Stat_Classifier:
     
     def getFeatures(self,training_img, mask, show_plot=False):
         """
-        This function does something interesting.
-
         Parameters:
-        training_img (2d array): training image.
-        mask (type): binarized image.
+            training_img (2d array): training image.
+            mask (type): binarized image.
 
         Returns:
-        type: Flattened features.
+            type: Flattened features.
         """
         binary_mask = mask>128
         #plt.imshow(binary_mask)
