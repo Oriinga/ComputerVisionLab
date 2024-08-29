@@ -2,7 +2,7 @@ from scipy.stats import multivariate_normal
 import numpy as np
 import matplotlib.pyplot as plt
 import cv2 
-
+import os
 
 vertical_prewitt = np.array([
     [1,1,1],
@@ -93,7 +93,8 @@ class Stat_Classifier:
         Returns:
             type: Flattened features.
         """
-        binary_mask = mask>128
+        if(type(mask)!=np.bool_):
+            binary_mask = mask>128
         #plt.imshow(binary_mask)
         
         #add dimensions
@@ -160,3 +161,11 @@ class Stat_Classifier:
         # print(flattened_features[0].shape)
 
         return np.array(flattened_features)
+print(os.path.exists("Images/image-35.jpg")) 
+training_img = cv2.imread("./Images/image-35.jpg")
+mask = cv2.imread("./Images/mask-35.png",cv2.IMREAD_GRAYSCALE)
+# plt.imshow(mask)
+# plt.show()
+class_inst = Stat_Classifier(training_img)
+trained_features = class_inst.getFeatures(training_img,mask,True)
+
