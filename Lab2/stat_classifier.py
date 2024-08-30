@@ -93,9 +93,9 @@ class Stat_Classifier:
         Returns:
             type: Flattened features.
         """
-        binary_mask = mask>128
-        #plt.imshow(binary_mask)
-        
+        if(type(mask[0][0]) != np.bool_):
+            binary_mask = mask >128
+
         #add dimensions
         # print(binary_mask.shape)
         hsv_training_img = cv2.cvtColor(training_img, cv2.COLOR_BGR2RGB)
@@ -160,3 +160,16 @@ class Stat_Classifier:
         # print(flattened_features[0].shape)
 
         return np.array(flattened_features)
+    
+
+
+image = cv2.imread("Images/image-35.jpg")
+
+plt.imshow(image)
+plt.show()
+
+class_inst = Stat_Classifier(image)
+mask = cv2.imread("Images/mask-35.png",cv2.IMREAD_GRAYSCALE)
+features = class_inst.getFeatures(image,mask,True)
+
+class_inst.classify(cv2.imread("Images/image-83.jpg"),)
