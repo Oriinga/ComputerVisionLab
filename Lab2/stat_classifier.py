@@ -2,7 +2,7 @@ from scipy.stats import multivariate_normal
 import numpy as np
 import matplotlib.pyplot as plt
 import cv2 
-
+import os
 
 vertical_prewitt = np.array([
     [1,1,1],
