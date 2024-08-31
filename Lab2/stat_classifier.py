@@ -27,7 +27,7 @@ class Stat_Classifier:
     def __init__(self,image) -> None:
         self.image = image
         pass
-    def classify(self,image_features,fg_features,bg_features):
+    def classify(self,validation_features,fg_features,bg_features,mask,image):
         """
         Multiplies two numbers and returns the result.
 
@@ -37,6 +37,7 @@ class Stat_Classifier:
         Returns:
             vector (2d): the predictions per pixel.
         """
+        
         fg_feature_matrix = np.stack(fg_features, axis=-1)
         fg_mean_vector = np.mean(fg_feature_matrix, axis=0)
         fg_cov_matrix = np.cov(fg_feature_matrix, rowvar=False)
@@ -52,12 +53,12 @@ class Stat_Classifier:
         print("bg mean shape:",bg_mean_vector.shape)
         print("bg cov shape",bg_cov_matrix.shape)
         
-        
-        reshaped_features = image_features.T
+    
+        reshaped_features = validation_features.T
         
         
         ####### vector of predictions #######
-        probabilities = self.foreground_given_pixel(reshaped_features, fg_mean_vector, fg_cov_matrix, bg_mean_vector, bg_cov_matrix)
+        probabilities = self.foreground_given_pixel(reshaped_features, fg_mean_vector, fg_cov_matrix, bg_mean_vector, bg_cov_matrix,mask,image)
         
         height, width = self.image.shape[0], self.image.shape[1]
         
@@ -81,6 +82,8 @@ class Stat_Classifier:
         numerator = multivariate_normal.pdf( x, mean = fg_mean, cov= fg_cov, allow_singular=True) * (N_fg)
         denominator = multivariate_normal.pdf(x, mean=fg_mean, cov=fg_cov, allow_singular=True)*N_fg \
                     + multivariate_normal.pdf( x, mean= bg_mean, cov= bg_cov, allow_singular=True) * (N_bg)
+        small_value = 1e-10  # You can adjust the small value if needed
+        denominator = np.where(denominator == 0, small_value, denominator)
         probability = numerator/denominator
         return probability
     
@@ -162,14 +165,26 @@ class Stat_Classifier:
         return np.array(flattened_features)
     
 
+# Mask,inverse and image (original in the lab1)
 
 image = cv2.imread("Images/image-35.jpg")
-
-plt.imshow(image)
-plt.show()
-
-class_inst = Stat_Classifier(image)
 mask = cv2.imread("Images/mask-35.png",cv2.IMREAD_GRAYSCALE)
-features = class_inst.getFeatures(image,mask,True)
+inverse_mask = 255-mask 
+class_inst = Stat_Classifier(image)
 
-class_inst.classify(cv2.imread("Images/image-83.jpg"),)
+# Validation features
+null = np.ones_like(mask)*255
+validation_img = cv2.imread("Images/image-83.jpg")
+
+
+# Get Features
+validation_features = class_inst.getFeatures(validation_img, null, show_plot=True)
+fg_features = class_inst.getFeatures(image, mask, show_plot=False)
+bg_features = class_inst.getFeatures(image, inverse_mask, show_plot=False)
+
+# Classify the original
+verify_img = class_inst.classify(validation_features, fg_features, bg_features,mask,image)
+theta = 0.5
+thresholded_img = verify_img.copy() > theta
+plt.imshow(thresholded_img, cmap="gray"), plt.title("Validation image prediction")
+plt.show()
