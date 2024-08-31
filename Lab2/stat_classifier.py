@@ -165,26 +165,27 @@ class Stat_Classifier:
         return np.array(flattened_features)
     
 
-# Mask,inverse and image (original in the lab1)
+    def dummy_test(self):
+        # Mask,inverse and image (original in the lab1)
 
-image = cv2.imread("Images/image-35.jpg")
-mask = cv2.imread("Images/mask-35.png",cv2.IMREAD_GRAYSCALE)
-inverse_mask = 255-mask 
-class_inst = Stat_Classifier(image)
+        image = cv2.imread("Images/image-35.jpg")
+        mask = cv2.imread("Images/mask-35.png",cv2.IMREAD_GRAYSCALE)
+        inverse_mask = 255-mask 
+        class_inst = Stat_Classifier(image)
 
-# Validation features
-null = np.ones_like(mask)*255
-validation_img = cv2.imread("Images/image-83.jpg")
+        # Validation features
+        null = np.ones_like(mask)*255
+        validation_img = cv2.imread("Images/image-83.jpg")
 
 
-# Get Features
-validation_features = class_inst.getFeatures(validation_img, null, show_plot=True)
-fg_features = class_inst.getFeatures(image, mask, show_plot=False)
-bg_features = class_inst.getFeatures(image, inverse_mask, show_plot=False)
+        # Get Features
+        validation_features = class_inst.getFeatures(validation_img, null, show_plot=True)
+        fg_features = class_inst.getFeatures(image, mask, show_plot=False)
+        bg_features = class_inst.getFeatures(image, inverse_mask, show_plot=False)
 
-# Classify the original
-verify_img = class_inst.classify(validation_features, fg_features, bg_features,mask,image)
-theta = 0.5
-thresholded_img = verify_img.copy() > theta
-plt.imshow(thresholded_img, cmap="gray"), plt.title("Validation image prediction")
-plt.show()
+        # Classify the original
+        verify_img = class_inst.classify(validation_features, fg_features, bg_features,mask,image)
+        theta = 0.5
+        thresholded_img = verify_img.copy() > theta
+        plt.imshow(thresholded_img, cmap="gray"), plt.title("Validation image prediction")
+        plt.show()
