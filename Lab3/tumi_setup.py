@@ -1,6 +1,12 @@
 import torch
 import torch.nn as nn
+from torch.utils.tensorboard import SummaryWriter
+
+
+from torchviz import make_dot
+
 # https://pytorch.org/tutorials/beginner/introyt/modelsyt_tutorial.html - documetnation on how to make a pytorch model
+
 # So this is the triple convolution, chat gpt says we should use normalization dont know if we should keep it
 class TripleConv(nn.Module):
     def __init__(self, in_channels, out_channels):
@@ -16,7 +22,8 @@ class TripleConv(nn.Module):
             nn.BatchNorm2d(out_channels),
             nn.ReLU(inplace=True)
         )
-        
+    def forward(self, x):
+        return self.triple_conv(x)
 # the down module is what the unet uses durint hte firlst half 
 class Down(nn.Module):
     def __init__(self, in_channels, out_channels):
@@ -105,3 +112,17 @@ class Unet(nn.Module):
         
         logits = self.outc(x)
         return logits
+    
+
+
+model = Unet(n_channels=3, n_classes=2, variant='convtranspose')  # Example: 3 input channels, 2 output classes
+
+x = torch.randn(1, 3, 128, 128)  # Batch size of 1, 3 channels (RGB), 128x128 image size
+y = model(x)
+
+writer = SummaryWriter()
+writer.add_graph(model, x)
+writer.close()
+
+
+# run tensorboard --logdir=runs to see network
