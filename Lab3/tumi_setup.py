@@ -24,7 +24,8 @@ class TripleConv(nn.Module):
         )
     def forward(self, x):
         return self.triple_conv(x)
-# the down module is what the unet uses durint hte firlst half 
+    
+# the down module is what the unet uses during the first half 
 class Down(nn.Module):
     def __init__(self, in_channels, out_channels):
         super(Down, self).__init__()
@@ -37,10 +38,11 @@ class Down(nn.Module):
     def forward(self, x):
         return self.conv_pool(x)        
 
-
+# up transpose, 
 class UpConvTranspose(nn.Module):
     def __init__(self, in_channels, out_channels):
         super(UpConvTranspose, self).__init__()
+        # to determine amount of out channels
         self.up = nn.ConvTranspose2d(in_channels, in_channels // 2, kernel_size=2, stride=2)
         self.conv = TripleConv(in_channels, out_channels)
 
@@ -49,6 +51,7 @@ class UpConvTranspose(nn.Module):
         # adding from the down section
         x = torch.cat([x2, x1], dim=1)
         return self.conv(x)
+
 class UpBilinear(nn.Module):
     def __init__(self, in_channels, out_channels):
         super(UpBilinear, self).__init__()
