@@ -160,3 +160,20 @@ cython_debug/
 #  and can be added to the global gitignore or merged into this file.  For a more nuclear
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
+Lab3/Lab3Backup.ipynb
+Lab3/lightning_logs/version_8/checkpoints/epoch=9-step=200.ckpt
+Lab3/lightning_logs/version_8/events.out.tfevents.1726844386.LPTWilliam.36636.0
+Lab3/lightning_logs/version_8/events.out.tfevents.1726844419.LPTWilliam.36636.1
+Lab3/lightning_logs/version_8/events.out.tfevents.1726844419.LPTWilliam.36636.2
+Lab3/lightning_logs/version_8/hparams.yaml
+Lab3/wandb/run-20240920_165923-y0towh2b/files/config.yaml
+Lab3/wandb/run-20240920_165923-y0towh2b/files/requirements.txt
+Lab3/wandb/run-20240920_165923-y0towh2b/files/wandb-metadata.json
+Lab3/wandb/run-20240920_165923-y0towh2b/files/wandb-summary.json
+Lab3/wandb/run-20240920_165923-y0towh2b/run-y0towh2b.wandb
+Lab3/wandb/run-20240920_171113-67vcwys9/files/config.yaml
+Lab3/wandb/run-20240920_171113-67vcwys9/run-67vcwys9.wandb
+Lab3/wandb/run-20240920_171231-cmurkq4b/files/config.yaml
+Lab3/wandb/run-20240920_171231-cmurkq4b/run-cmurkq4b.wandb
+Lab3/wandb/run-20240920_173001-nb5q80k7/files/config.yaml
+Lab3/wandb/run-20240920_173001-nb5q80k7/run-nb5q80k7.wandb
