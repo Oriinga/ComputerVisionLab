@@ -1,0 +1,94 @@
+wandb_version: 1
+
+_wandb:
+  desc: null
+  value:
+    python_version: 3.12.6
+    cli_version: 0.17.8
+    framework: lightning
+    is_jupyter_run: true
+    is_kaggle_kernel: false
+    start_time: 1727000605
+    t:
+      1:
+      - 1
+      - 5
+      - 9
+      - 41
+      - 49
+      - 53
+      - 55
+      - 63
+      - 74
+      - 103
+      2:
+      - 1
+      - 5
+      - 9
+      - 41
+      - 49
+      - 53
+      - 55
+      - 63
+      - 74
+      - 103
+      3:
+      - 7
+      - 13
+      - 23
+      - 66
+      4: 3.12.6
+      5: 0.17.8
+      8:
+      - 1
+      - 3
+      - 5
+      13: windows-amd64
+    m:
+    - 1: trainer/global_step
+      6:
+      - 3
+    - 1: val_loss
+      5: 1
+      6:
+      - 1
+    - 1: valid_per_image_iou
+      5: 1
+      6:
+      - 1
+    - 1: valid_dataset_iou
+      5: 1
+      6:
+      - 1
+    - 1: valid_f1_score
+      5: 1
+      6:
+      - 1
+    - 1: epoch
+      5: 1
+      6:
+      - 1
+    - 1: train_per_image_iou
+      5: 1
+      6:
+      - 1
+    - 1: train_dataset_iou
+      5: 1
+      6:
+      - 1
+    - 1: train_f1_score
+      5: 1
+      6:
+      - 1
+    - 1: test_per_image_iou
+      5: 1
+      6:
+      - 1
+    - 1: test_dataset_iou
+      5: 1
+      6:
+      - 1
+    - 1: test_f1_score
+      5: 1
+      6:
+      - 1
