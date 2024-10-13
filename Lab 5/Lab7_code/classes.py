@@ -173,6 +173,8 @@ class Piece:
 
     def insert(self): # Inserts the piece into the canvas using an affine transformation
         # TODO: Implement this function
+        
+
         print("Inserting piece: ", self.idx)
 	    
 
