@@ -27,8 +27,8 @@ cachier = partial(cachier, pickle_reload=False, cache_dir='data/cache')
 SIZE = (768, 1024)
 
 DATA_PATH_PAIRS = list(zip(
-    natsorted(glob(f'./datasets/puzzle_corners_{SIZE[1]}x{SIZE[0]}/images-{SIZE[1]}x{SIZE[0]}/*.png')),
-    natsorted(glob(f'./datasets/puzzle_corners_{SIZE[1]}x{SIZE[0]}/masks-{SIZE[1]}x{SIZE[0]}/*.png')),
+    natsorted(glob(f'../datasets/puzzle_corners_{SIZE[1]}x{SIZE[0]}/images-{SIZE[1]}x{SIZE[0]}/*.png')),
+    natsorted(glob(f'../datasets/puzzle_corners_{SIZE[1]}x{SIZE[0]}/masks-{SIZE[1]}x{SIZE[0]}/*.png')),
 ))
 DATA_IMGS = np.array([img_as_float32(imageio.imread(img_path)) for img_path, _ in tqdm(DATA_PATH_PAIRS, 'Loading Images')])
 DATA_MSKS = np.array([img_as_float32(imageio.imread(msk_path)) for _, msk_path in tqdm(DATA_PATH_PAIRS, 'Loading Masks')])
@@ -36,7 +36,7 @@ DATA_MSKS = np.array([img_as_float32(imageio.imread(msk_path)) for _, msk_path i
 assert DATA_IMGS.shape == (48, SIZE[0], SIZE[1], 3)
 assert DATA_MSKS.shape == (48, SIZE[0], SIZE[1])
 
-with open(f'./datasets/puzzle_corners_{SIZE[1]}x{SIZE[0]}/corners.json', mode='r') as f:
+with open(f'../datasets/puzzle_corners_{SIZE[1]}x{SIZE[0]}/corners.json', mode='r') as f:
     DATA_CORNER_NAMES, DATA_CORNERS = json.load(f)
     DATA_CORNERS = np.array(DATA_CORNERS)
 
@@ -95,15 +95,21 @@ class Piece:
         self.find_edges()
 
     def update_self_piece_type(self):
-        types = ["corner","edge","interior"]
+        
+        types = ["corner", "edge", "interior"]
         counter = 0
-        for x in self.edge_list:
-            if(x.connected_edge.parent_piece.inserted == True):
+        
+        
+        for edge in self.edge_list:
+            if edge.connected_edge is not None and edge.connected_edge.parent_piece.inserted:
                 counter += 1
-        if (counter <3):
+      
+        if counter < 3:
             self.piece_type = types[counter]
+            print("Updated piece type:", self.piece_type)
         else:
-            raise Exception("Too Many Connected Edges") 
+            raise Exception("Too Many Connected Edges: The piece seems to have more than 2 connected edges.")
+
 
 
     def return_edge(self): # generator which can be used to loop through edges in the BFS
@@ -132,9 +138,44 @@ class Piece:
         print("Right Edge")
         self.right_edge.info()
 
-    # def update_edges(self, transform):
-    #     # TODO: Update the corner and edge information of the puzzle piece
+    def update_edges(self, transform):
+        # TODO: Update the corner and edge information of the puzzle piece
 
+        # NOTE: we do not transpose the transform since we feed in M from insert
+        # M is created from cv2.getAffineTransform  which can be directly applied to points
+        # in the homogeneous coords so we can just to right multiplication directly with it!
+        
+        # print("Updating Edges")
+        
+        
+        # Updating the corners for the piece
+        for i  in range(len(self.corners)):
+            corner = self.corners[i]
+            corner_flipped = np.flip(corner)
+            #appending 1 tot he front
+            corner_flipped_homogeneous = np.append(corner_flipped, 1)
+
+            #doing the transformation
+            transformed_corner = np.dot(transform, corner_flipped_homogeneous)
+            transformed_corner_flipped_back = np.flip(transformed_corner[:2]) #back to row-col form
+            self.corners[i] = transformed_corner_flipped_back
+
+        # updating the edges point1 and point 2
+        # to match the canvas coords
+        for edge in self.edge_list:
+            point1_flipped = np.flip(edge.point1)
+            point1_flipped_homogeneous = np.append(point1_flipped, 1)
+            transformed_point1 = np.dot(transform, point1_flipped_homogeneous)
+            edge.point1 = np.flip(transformed_point1[:2])
+
+            # for point2
+            point2_flipped = np.flip(edge.point2)
+            point2_flipped_homogeneous = np.append(point2_flipped, 1)
+            transformed_point2 = np.dot(transform, point2_flipped_homogeneous)
+            edge.point2 = np.flip(transformed_point2[:2])
+
+        # print("Update Complete")
+    
     def extract_features(self):
         # Function which will extract all the necessary features to classify pixels
         # into background and foreground
@@ -169,13 +210,160 @@ class Piece:
         self.left_edge = Edge(self.top_left, self.bottom_left, None, self) #1
         self.bottom_edge = Edge(self.bottom_left, self.bottom_right, None, self) #2
         self.right_edge = Edge(self.bottom_right, self.top_right, None, self) #3
-        self.edge_list = [self.top_edge, self.left_edge, self.bottom_edge, self.right_edge, None]
+
+        #adding to list in anti-clockwise order
+        self.edge_list = [self.top_edge, self.left_edge, self.bottom_edge, self.right_edge]
 
     def insert(self): # Inserts the piece into the canvas using an affine transformation
         # TODO: Implement this function
+        # Start BFS by adding in the bottom left corner piece
+        # print("Inserting piece: ", self.idx)
+        # queue = []
+        # queue.append(self)
+        self.inserted = True
+        self.update_self_piece_type()
+        
+            # Loop through self.edge_list of the corner piece and find the two flat edges (lets call them first_edge
+        # and second_edge where second_edge is anti-clockwise of first_edge). first_edge.point2
+        # should be the same coordinates as second_edge.point1
+        
+        # edges are in anti clock wise, so flat 1 flat 2, the mod operator is to make the index a rolling index (0-1 = 3)
+        
+        first_edge:Edge = None
+        second_edge:Edge = None
+        """==============================CORNER==========================================="""
+        if(self.piece_type=="corner"):
+            print("\t -> inside corner")
+            for i in range(4):
+                if(self.edge_list[i].is_flat == True):
+                    if(self.edge_list[(i - 1) % 4].is_flat == True):
+                        first_edge = self.edge_list[(i - 1) % 4]
+                        second_edge = self.edge_list[i]
+                        break
+                    elif(self.edge_list[(i + 1) % 4].is_flat == True):
+                        first_edge = self.edge_list[i]
+                        second_edge = self.edge_list[(i + 1) % 4]
+                        break
+                    else:
+                        raise Exception("Not a corner piece") 
+            
+            piece_height = abs(second_edge.point2[1] - first_edge.point2[1])
+            
+            piece_width = abs(first_edge.point2[0] - first_edge.point1[0])
+            
+            pts_src = [
+                first_edge.point2[::-1].tolist(),
+                first_edge.point1[::-1].tolist(),
+                second_edge.point2[::-1].tolist()
+            ]
+
+            
+            pts_dst = [
+                [0,canvas.shape[0]-1],  # Bottom-left 
+                [0,799 - piece_height],  # Along left edge
+                [second_edge.point2[0].item(),canvas.shape[0]-1]  # Along bottom edge
+            ]
+    
+    
+    
+            
+           
+
+#==============================INTERIOR==========================================="""
+        elif self.piece_type == "interior":
+            print("\t -> inside interior ")
+            pts_src = []
+            pts_dst = []
+        
+            for edge in self.edge_list:
+                if edge.connected_edge is not None and edge.connected_edge.parent_piece.inserted:
+                    print("Edge found with connected piece!")
+        
+                    #  edge.point1
+                    if not any(np.array_equal(edge.point1, src_point) for src_point in pts_src):
+                        pts_src.append(edge.point1[::-1].tolist())  # flip the point to match the format
+                        pts_dst.append(edge.connected_edge.point1[::-1].tolist())  
+        
+                    #  edge.point2
+                    if not any(np.array_equal(edge.point2, src_point) for src_point in pts_src):
+                        pts_src.append(edge.point2[::-1].tolist())
+                        pts_dst.append(edge.connected_edge.point2[::-1].tolist())  # map to connected point
+        
+            # we check if we have 3 points
+            if len(pts_src) <2 or len(pts_dst) < 2:
+                raise Exception("Not enough points to perform affine transformation")
+        
+    #==============================EDGES==========================================="""
+    
+        elif self.piece_type == "edge":
+            print("\t -> inside edge")
+            pts_src = []
+            pts_dst = []
+        
+            for edge in self.edge_list:
+                if edge.connected_edge is not None and edge.connected_edge.parent_piece.inserted:
+                    
+                    print("Connected edge found!,", edge.connected_edge.parent_piece.idx)
+                    pts_src.append(edge.point1[::-1].tolist())
+                    pts_src.append(edge.point2[::-1].tolist())
+                    pts_dst.append(edge.connected_edge.point1[::-1].tolist())
+                    pts_dst.append(edge.connected_edge.point2[::-1].tolist())
+        
+                    #  scaling
+                    orig_norm = np.linalg.norm(edge.point2 - edge.point1)
+                    canvas_norm = np.linalg.norm(edge.connected_edge.point2 - edge.connected_edge.point1)
+                    ratio = orig_norm / canvas_norm
+        
+                    # debug output for norms and ratio
+                    # print(f"Original Norm: {orig_norm}, Canvas Norm: {canvas_norm}, Ratio: {ratio}")
+        
+                    # edge lies along the bottom of the puzzle
+                    if (pts_dst[0][0] - pts_dst[1][0]) > (pts_dst[0][1] - pts_dst[1][1]):
+                        print("Edge lies along the bottom of the puzzle.")
+                        fourth_edge = self.edge_list[(self.edge_list.index(edge) + 1) % len(self.edge_list)]
+                        pts_src.append(fourth_edge.point2[::-1].tolist())
+                        edge_norm = np.linalg.norm(fourth_edge.point2 - fourth_edge.point1)
+                        pts_dst.append([pts_dst[1][0] + int(ratio * edge_norm), pts_dst[1][1]])
+        
+                    else:  # the left side
+                        print("Edge lies along the left side of the puzzle.")
+                        fifth_edge = self.edge_list[(self.edge_list.index(edge) - 1) % len(self.edge_list)]
+                        pts_src.append(fifth_edge.point1[::-1].tolist())
+                        edge_norm = np.linalg.norm(fifth_edge.point2 - fifth_edge.point1)
+                        pts_dst.append([pts_dst[0][0], pts_dst[0][1] + int(ratio * edge_norm)])
+
+
+            if len(pts_src) < 3 or len(pts_dst) < 3:
+                raise Exception("Not enough points to create affine transformation.")
+            
+            
+
+
+        pts_src = np.array(pts_src,dtype=np.float32)
+        pts_dst = np.array(pts_dst,dtype=np.float32)
+
+        print(f"\n\nFinal Destination Points: {pts_dst}\n\n")
+        M = cv2.getAffineTransform(pts_src,pts_dst)
+        self.dst = cv2.warpAffine(self.image,M,(700,800))
+        mask_warped = cv2.warpAffine(self.mask,M,(700,800))
+        
+        # make it 3 channel to multiply with RGB image, then overlay it with the destination.
+        mask_3_channel = cv2.merge([mask_warped, mask_warped, mask_warped])
+        self.dst = mask_3_channel*self.dst 
+
+        # Updating the edges for part 3
+        self.update_edges(M)
+        print("done inserting!")
+
+
+        # I dont know if i miss-understand, col,row major means that the bottom left is at 0,699, or is it 0,799?
+        # NOTE swapped height and width calculations because originally the pieces were being plotted stretched out !
+
+
+        
         
 
-        print("Inserting piece: ", self.idx)
+        
 	    
 
 class Puzzle(object):
@@ -362,4 +550,4 @@ class Puzzle(object):
                     self.pieces[i].edge_list[j].is_flat = True
 
 # Create our canvas with the necessary size
-canvas = np.zeros((800,700,3))
+canvas = np.zeros((800, 700, 3), dtype=np.uint8)  
