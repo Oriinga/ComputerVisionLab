@@ -9,7 +9,7 @@ import seaborn
 import networkx as nx
 
 import sklearn.neighbors
-
+import copy
 import imageio
 import cv2
 import skimage
@@ -144,35 +144,76 @@ class Piece:
         # NOTE: we do not transpose the transform since we feed in M from insert
         # M is created from cv2.getAffineTransform  which can be directly applied to points
         # in the homogeneous coords so we can just to right multiplication directly with it!
-        
+        for i in range(len(self.corners)):
+            plt.scatter(self.corners[i][0],self.corners[i][1])
+        plt.title("Start of update edge")
+        plt.show()
         # print("Updating Edges")
-        
-        
         # Updating the corners for the piece
         for i  in range(len(self.corners)):
-            corner = self.corners[i]
+            corner = copy.copy(self.corners[i])
+            print(corner)
             corner_flipped = np.flip(corner)
+            print(corner_flipped)
+
             #appending 1 tot he front
             corner_flipped_homogeneous = np.append(corner_flipped, 1)
-
+            print(corner_flipped_homogeneous)
             #doing the transformation
-            transformed_corner = np.dot(transform, corner_flipped_homogeneous)
-            transformed_corner_flipped_back = np.flip(transformed_corner[:2]) #back to row-col form
+            transformed_corner = np.dot(corner_flipped_homogeneous,transform.T)
+            print("CORNER SHAPE", transformed_corner.shape)
+            transformed_corner_flipped_back = np.flip(transformed_corner) #back to row-col form
             self.corners[i] = transformed_corner_flipped_back
+
+        for edge in self.edge_list:
+            plt.scatter(edge.point1[0],edge.point2[1])
+            plt.scatter(edge.point2[0],edge.point2[1])
+        plt.title("Bfore sides update")
+        plt.show()
+            
+        self.top_left = self.corners[0][::-1]
+        self.top_right = self.corners[3][::-1]
+        self.bottom_right = self.corners[2][::-1]
+        self.bottom_left = self.corners[1][::-1]
+
 
         # updating the edges point1 and point 2
         # to match the canvas coords
+        fig,ax = plt.subplots(1,2)
+
         for edge in self.edge_list:
+            plt.scatter(edge.point1[0],edge.point2[1])
+            plt.scatter(edge.point2[0],edge.point2[1])
+        plt.title("Before print")
+        plt.show()
+
+        print("Edges")
+        for edge in self.edge_list:
+            plt.subplot(1,2,1)
+            plt.scatter( edge.point1[0], edge.point1[1])
+            plt.scatter( edge.point2[0], edge.point2[1])
+            plt.title("Before")
             point1_flipped = np.flip(edge.point1)
             point1_flipped_homogeneous = np.append(point1_flipped, 1)
-            transformed_point1 = np.dot(transform, point1_flipped_homogeneous)
-            edge.point1 = np.flip(transformed_point1[:2])
+            transformed_point1 = np.dot(point1_flipped_homogeneous,transform.T)
+            print(transformed_point1.shape)
+            edge.point1 = np.flip(transformed_point1)
 
+            print(edge.point1)
             # for point2
             point2_flipped = np.flip(edge.point2)
             point2_flipped_homogeneous = np.append(point2_flipped, 1)
-            transformed_point2 = np.dot(transform, point2_flipped_homogeneous)
-            edge.point2 = np.flip(transformed_point2[:2])
+            transformed_point2 = np.dot(point2_flipped_homogeneous,transform.T)
+            edge.point2 = np.flip(transformed_point2)
+            print(edge.point2)
+
+            plt.subplot(1,2,2)
+            plt.scatter( edge.point1[0], edge.point1[1])
+            plt.scatter( edge.point2[0], edge.point2[1])
+            plt.title("After")
+
+
+        plt.show()
 
         # print("Update Complete")
     
@@ -234,19 +275,24 @@ class Piece:
         """==============================CORNER==========================================="""
         if(self.piece_type=="corner"):
             print("\t -> inside corner")
+            for edge in self.edge_list:
+                plt.scatter(edge.point1[0],edge.point2[1])
+                plt.scatter(edge.point2[0],edge.point2[1])
+            plt.title("pre proc")
+            plt.show()
             for i in range(4):
                 if(self.edge_list[i].is_flat == True):
                     if(self.edge_list[(i - 1) % 4].is_flat == True):
-                        first_edge = self.edge_list[(i - 1) % 4]
-                        second_edge = self.edge_list[i]
+                        first_edge = copy.copy(self.edge_list[(i - 1) % 4])
+                        second_edge = copy.copy(self.edge_list[i])
                         break
                     elif(self.edge_list[(i + 1) % 4].is_flat == True):
-                        first_edge = self.edge_list[i]
-                        second_edge = self.edge_list[(i + 1) % 4]
+                        first_edge = copy.copy(self.edge_list[i])
+                        second_edge = copy.copy(self.edge_list[(i + 1) % 4])
                         break
                     else:
                         raise Exception("Not a corner piece") 
-            
+
             piece_height = abs(second_edge.point2[1] - first_edge.point2[1])
             
             piece_width = abs(first_edge.point2[0] - first_edge.point1[0])
@@ -263,15 +309,11 @@ class Piece:
                 [0,799 - piece_height],  # Along left edge
                 [second_edge.point2[0].item(),canvas.shape[0]-1]  # Along bottom edge
             ]
-    
-    
-    
-            
-           
-
+        
 #==============================INTERIOR==========================================="""
         elif self.piece_type == "interior":
             print("\t -> inside interior ")
+            self.display_im()
             pts_src = []
             pts_dst = []
         
@@ -299,16 +341,24 @@ class Piece:
             print("\t -> inside edge")
             pts_src = []
             pts_dst = []
-        
+            self.display_im()
             for edge in self.edge_list:
+                # if the edge is connected and its sibling has already been inserted
                 if edge.connected_edge is not None and edge.connected_edge.parent_piece.inserted:
                     
                     print("Connected edge found!,", edge.connected_edge.parent_piece.idx)
+                    # inserting points into points source, but flipping to column major
                     pts_src.append(edge.point1[::-1].tolist())
                     pts_src.append(edge.point2[::-1].tolist())
                     pts_dst.append(edge.connected_edge.point1[::-1].tolist())
                     pts_dst.append(edge.connected_edge.point2[::-1].tolist())
-        
+
+                    print("EDGE : ", edge.connected_edge)
+                    plt.scatter(edge.connected_edge.point1[0],edge.connected_edge.point1[1])
+                    plt.scatter(edge.connected_edge.point2[0],edge.connected_edge.point2[1])
+
+
+                    plt.show()
                     #  scaling
                     orig_norm = np.linalg.norm(edge.point2 - edge.point1)
                     canvas_norm = np.linalg.norm(edge.connected_edge.point2 - edge.connected_edge.point1)
@@ -337,7 +387,11 @@ class Piece:
                 raise Exception("Not enough points to create affine transformation.")
             
             
-
+        for edge in self.edge_list:
+            plt.scatter(edge.point1[0],edge.point2[1])
+            plt.scatter(edge.point2[0],edge.point2[1])
+        plt.title("before getting affine")
+        plt.show()
 
         pts_src = np.array(pts_src,dtype=np.float32)
         pts_dst = np.array(pts_dst,dtype=np.float32)
@@ -350,7 +404,13 @@ class Piece:
         # make it 3 channel to multiply with RGB image, then overlay it with the destination.
         mask_3_channel = cv2.merge([mask_warped, mask_warped, mask_warped])
         self.dst = mask_3_channel*self.dst 
-
+        plt.imshow(self.dst)
+        plt.show()
+        for edge in self.edge_list:
+            plt.scatter(edge.point1[0],edge.point2[1])
+            plt.scatter(edge.point2[0],edge.point2[1])
+        plt.title("Before update edge")
+        plt.show()
         # Updating the edges for part 3
         self.update_edges(M)
         print("done inserting!")
