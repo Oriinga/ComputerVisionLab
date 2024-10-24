@@ -123,31 +123,31 @@ class Piece:
 
     def transform_point(self, point_to_transform, M):
         # Flip (row, col) -> (col, row) for consistency with (x, y) coordinates
-        point_flipped = point_to_transform
+        point_flipped = np.flip(point_to_transform)
         point_homo = np.append(point_flipped, 1).astype(np.float32)
-        point_result = np.dot(M, point_homo)
+        point_result = np.dot( point_homo,M.T)
         return np.flip(point_result)
 
     def update_edges(self, transform):
         # Plot the canvas to visualize the updated coordinates
-        plt.imshow(canvas)
-        print("EDGES")
-        for x in self.edge_list:
-            if(x!= None):
-                print(x.point2)
-        print("Corners")
-        for x in self.corners:
-            print(x)
-        # Update the corners with the given affine transformation
-        for i in range(len(self.corners)):
-            transformed_corner = self.transform_point(self.corners[i], transform)
-            self.corners[i] = transformed_corner  # Store the updated corner
-            plt.scatter(self.corners[i][1], self.corners[i][0], c='r')  # Plot as (x, y)
-        #NOTE, this is super weird, The edge list is pointing to the corner attribtes, in a flipped manner???????????!!!!!!!!!!!!!!!!!!!!!!!!!!?!
+
+
+        self.bottom_left = self.transform_point(self.bottom_left, transform)
+        self.bottom_right = self.transform_point(self.bottom_right, transform)
+        self.top_left = self.transform_point(self.top_left, transform)
+        self.top_right = self.transform_point(self.top_right, transform)
+
+        plt.scatter(self.bottom_left[1],self.bottom_left[0])
+        plt.scatter(self.bottom_right[1],self.bottom_right[0])
+        plt.scatter(self.top_left[1],self.top_left[0])
+        plt.scatter(self.top_right[1],self.top_right[0])
+
         for edge in self.edge_list:
             if(edge!= None):
-                plt.scatter(edge.point1[0], edge.point1[1], c='b')
-                plt.scatter(edge.point2[0], edge.point2[1], c='b')
+                edge.point1 = self.transform_point(edge.point1,transform)
+                edge.point2 = self.transform_point(edge.point2,transform)
+                plt.scatter(edge.point1[1], edge.point1[0], c='b')
+                plt.scatter(edge.point2[1], edge.point2[0], c='b')
 
 
         # Show the plot with the transformed corners and edges
