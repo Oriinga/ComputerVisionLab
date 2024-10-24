@@ -27,8 +27,8 @@ cachier = partial(cachier, pickle_reload=False, cache_dir='data/cache')
 SIZE = (768, 1024)
 
 DATA_PATH_PAIRS = list(zip(
-    natsorted(glob(f'./datasets/puzzle_corners_{SIZE[1]}x{SIZE[0]}/images-{SIZE[1]}x{SIZE[0]}/*.png')),
-    natsorted(glob(f'./datasets/puzzle_corners_{SIZE[1]}x{SIZE[0]}/masks-{SIZE[1]}x{SIZE[0]}/*.png')),
+    natsorted(glob(f'../datasets/puzzle_corners_{SIZE[1]}x{SIZE[0]}/images-{SIZE[1]}x{SIZE[0]}/*.png')),
+    natsorted(glob(f'../datasets/puzzle_corners_{SIZE[1]}x{SIZE[0]}/masks-{SIZE[1]}x{SIZE[0]}/*.png')),
 ))
 DATA_IMGS = np.array([img_as_float32(imageio.imread(img_path)) for img_path, _ in tqdm(DATA_PATH_PAIRS, 'Loading Images')])
 DATA_MSKS = np.array([img_as_float32(imageio.imread(msk_path)) for _, msk_path in tqdm(DATA_PATH_PAIRS, 'Loading Masks')])
@@ -120,8 +120,38 @@ class Piece:
         print("Right Edge")
         self.right_edge.info()
 
+
+    def transform_point(self, point_to_transform, M):
+        # Flip (row, col) -> (col, row) for consistency with (x, y) coordinates
+        point_flipped = point_to_transform
+        point_homo = np.append(point_flipped, 1).astype(np.float32)
+        point_result = np.dot(M, point_homo)
+        return np.flip(point_result)
+
     def update_edges(self, transform):
-        # TODO: Update the corner and edge information of the puzzle piece
+        # Plot the canvas to visualize the updated coordinates
+        plt.imshow(canvas)
+        print("EDGES")
+        for x in self.edge_list:
+            if(x!= None):
+                print(x.point2)
+        print("Corners")
+        for x in self.corners:
+            print(x)
+        # Update the corners with the given affine transformation
+        for i in range(len(self.corners)):
+            transformed_corner = self.transform_point(self.corners[i], transform)
+            self.corners[i] = transformed_corner  # Store the updated corner
+            plt.scatter(self.corners[i][1], self.corners[i][0], c='r')  # Plot as (x, y)
+        #NOTE, this is super weird, The edge list is pointing to the corner attribtes, in a flipped manner???????????!!!!!!!!!!!!!!!!!!!!!!!!!!?!
+        for edge in self.edge_list:
+            if(edge!= None):
+                plt.scatter(edge.point1[0], edge.point1[1], c='b')
+                plt.scatter(edge.point2[0], edge.point2[1], c='b')
+
+
+        # Show the plot with the transformed corners and edges
+        plt.show()
 
     def extract_features(self):
         # Function which will extract all the necessary features to classify pixels
@@ -159,9 +189,81 @@ class Piece:
         self.right_edge = Edge(self.bottom_right, self.top_right, None, self) #3
         self.edge_list = [self.top_edge, self.left_edge, self.bottom_edge, self.right_edge, None]
 
+    def det_piece_type(self):
+        piece_types = ['interior','edge','corner' ]
+        
+        count = 0
+        for i in range(len(self.edge_list)-1):
+            if(self.edge_list[i].is_flat):
+                count+=1
+        if(count<3):
+            self.piece_type = piece_types[count]
+        else:
+            raise ValueError("Count must be less than 3.")
+
     def insert(self): # Inserts the piece into the canvas using an affine transformation
         # TODO: Implement this function
         print("Inserting piece: ", self.idx)
+        self.det_piece_type()
+        print(self.piece_type)
+        
+        pts_src = []
+        pts_dsc = []
+
+        if(self.piece_type == 'corner'):
+            # get the first and second edge
+            first_edge:Edge = None
+            second_edge:Edge = None
+            for i in range(len(self.edge_list)-1):
+                if(self.edge_list[i].is_flat):
+                    next = (i+1)%4
+                    last = (i-1)%4
+                    if(self.edge_list[next].is_flat):
+                        first_edge = self.edge_list[i]
+                        second_edge = self.edge_list[next]
+                    elif(self.edge_list[last].is_flat):
+                        first_edge = self.edge_list[last]
+                        second_edge = self.edge_list[i]
+                    else:
+                        raise ValueError("thought it was a corner, but it was not")   
+                                          
+            if( not(np.array_equal(first_edge.point2,second_edge.point1))    ):
+                raise ValueError("Edge corner mismatch")
+            # Mapping to corner. Here we assume that the y axis of the image is 800 and x axis is 700
+            # bottom left is then at x = 0, y = 800
+            # We will be appending them in col row major
+
+            # appending corner point
+            pts_src.append([first_edge.point2[1],first_edge.point2[0]])
+            pts_dsc.append([0,799]) # coloumn 0 and row 799
+            # appending left edge
+            pts_src.append([first_edge.point1[1],first_edge.point1[0]])
+            vertical_distance = abs(first_edge.point1[0] - first_edge.point2[0]) # difference of rows
+            pts_dsc.append([0,799-vertical_distance])
+
+            # appending bottom edge
+            pts_src.append([second_edge.point2[1],second_edge.point2[0]]) # remember points are r,c and we need c.r
+            horizontal_distance = abs(second_edge.point1[1] - second_edge.point2[1]) # difference of columns
+            pts_dsc.append([0+horizontal_distance,799])
+
+        #----------------EDGE-----------------------
+        elif(self.piece_type == "ege"):
+            pass
+        pts_src = np.array(pts_src,dtype=np.float32)
+        pts_dsc = np.array(pts_dsc,dtype=np.float32)
+        print(pts_src)
+        print(pts_dsc)
+
+        M = cv2.getAffineTransform(pts_src,pts_dsc)
+        self.dst = cv2.warpAffine(self.image,M,(700,800))
+        self.mask = np.stack([self.mask]*3,axis=2)
+        self.mask = cv2.warpAffine(self.mask,M,(700,800))
+        canvas[:] = self.mask*self.dst + (1-self.mask)*canvas
+        self.update_edges(M)
+
+
+        plt.imshow(canvas)
+        plt.show()
 	    
 
 class Puzzle(object):
