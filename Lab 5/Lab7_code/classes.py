@@ -153,23 +153,16 @@ class Piece:
         for i  in range(len(self.corners)):
             corner = copy.copy(self.corners[i])
             print(corner)
-            corner_flipped = np.flip(corner)
+            corner_flipped = corner
             print(corner_flipped)
-
             #appending 1 tot he front
             corner_flipped_homogeneous = np.append(corner_flipped, 1)
-            print(corner_flipped_homogeneous)
             #doing the transformation
-            transformed_corner = np.dot(corner_flipped_homogeneous,transform.T)
-            print("CORNER SHAPE", transformed_corner.shape)
+            transformed_corner = np.dot(transform,corner_flipped_homogeneous)
             transformed_corner_flipped_back = np.flip(transformed_corner) #back to row-col form
             self.corners[i] = transformed_corner_flipped_back
 
-        for edge in self.edge_list:
-            plt.scatter(edge.point1[0],edge.point2[1])
-            plt.scatter(edge.point2[0],edge.point2[1])
-        plt.title("Bfore sides update")
-        plt.show()
+
             
         self.top_left = self.corners[0][::-1]
         self.top_right = self.corners[3][::-1]
@@ -179,42 +172,11 @@ class Piece:
 
         # updating the edges point1 and point 2
         # to match the canvas coords
-        fig,ax = plt.subplots(1,2)
-
         for edge in self.edge_list:
             plt.scatter(edge.point1[0],edge.point2[1])
             plt.scatter(edge.point2[0],edge.point2[1])
-        plt.title("Before print")
+        plt.title("End of sides update")
         plt.show()
-
-        print("Edges")
-        for edge in self.edge_list:
-            plt.subplot(1,2,1)
-            plt.scatter( edge.point1[0], edge.point1[1])
-            plt.scatter( edge.point2[0], edge.point2[1])
-            plt.title("Before")
-            point1_flipped = np.flip(edge.point1)
-            point1_flipped_homogeneous = np.append(point1_flipped, 1)
-            transformed_point1 = np.dot(point1_flipped_homogeneous,transform.T)
-            print(transformed_point1.shape)
-            edge.point1 = np.flip(transformed_point1)
-
-            print(edge.point1)
-            # for point2
-            point2_flipped = np.flip(edge.point2)
-            point2_flipped_homogeneous = np.append(point2_flipped, 1)
-            transformed_point2 = np.dot(point2_flipped_homogeneous,transform.T)
-            edge.point2 = np.flip(transformed_point2)
-            print(edge.point2)
-
-            plt.subplot(1,2,2)
-            plt.scatter( edge.point1[0], edge.point1[1])
-            plt.scatter( edge.point2[0], edge.point2[1])
-            plt.title("After")
-
-
-        plt.show()
-
         # print("Update Complete")
     
     def extract_features(self):
@@ -356,8 +318,9 @@ class Piece:
                     print("EDGE : ", edge.connected_edge)
                     plt.scatter(edge.connected_edge.point1[0],edge.connected_edge.point1[1])
                     plt.scatter(edge.connected_edge.point2[0],edge.connected_edge.point2[1])
-
-
+                    plt.xlim(0,700)
+                    plt.ylim(0,800)
+                    plt.gca().invert_yaxis()
                     plt.show()
                     #  scaling
                     orig_norm = np.linalg.norm(edge.point2 - edge.point1)
