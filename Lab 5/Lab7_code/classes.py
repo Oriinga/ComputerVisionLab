@@ -144,6 +144,7 @@ class Piece:
         # NOTE: we do not transpose the transform since we feed in M from insert
         # M is created from cv2.getAffineTransform  which can be directly applied to points
         # in the homogeneous coords so we can just to right multiplication directly with it!
+        plt.imshow(self.image)
         for i in range(len(self.corners)):
             plt.scatter(self.corners[i][0],self.corners[i][1])
         plt.title("Start of update edge")
@@ -152,22 +153,21 @@ class Piece:
         # Updating the corners for the piece
         for i  in range(len(self.corners)):
             corner = copy.copy(self.corners[i])
-            print(corner)
-            corner_flipped = corner
-            print(corner_flipped)
+            corner_flipped = np.flip(corner)
             #appending 1 tot he front
             corner_flipped_homogeneous = np.append(corner_flipped, 1)
             #doing the transformation
             transformed_corner = np.dot(transform,corner_flipped_homogeneous)
             transformed_corner_flipped_back = np.flip(transformed_corner) #back to row-col form
             self.corners[i] = transformed_corner_flipped_back
+            print(transformed_corner_flipped_back)
 
 
             
-        self.top_left = self.corners[0][::-1]
-        self.top_right = self.corners[3][::-1]
-        self.bottom_right = self.corners[2][::-1]
-        self.bottom_left = self.corners[1][::-1]
+        self.top_left = self.corners[0]
+        self.top_right = self.corners[3]
+        self.bottom_right = self.corners[2]
+        self.bottom_left = self.corners[1]
 
 
         # updating the edges point1 and point 2
@@ -175,6 +175,9 @@ class Piece:
         for edge in self.edge_list:
             plt.scatter(edge.point1[0],edge.point2[1])
             plt.scatter(edge.point2[0],edge.point2[1])
+        plt.xlim(0,700)
+        plt.ylim(0,800)
+        plt.gca().invert_yaxis()
         plt.title("End of sides update")
         plt.show()
         # print("Update Complete")
@@ -310,16 +313,17 @@ class Piece:
                     
                     print("Connected edge found!,", edge.connected_edge.parent_piece.idx)
                     # inserting points into points source, but flipping to column major
-                    pts_src.append(edge.point1[::-1].tolist())
                     pts_src.append(edge.point2[::-1].tolist())
+                    pts_src.append(edge.point1[::-1].tolist())
+
                     pts_dst.append(edge.connected_edge.point1[::-1].tolist())
                     pts_dst.append(edge.connected_edge.point2[::-1].tolist())
 
                     print("EDGE : ", edge.connected_edge)
                     plt.scatter(edge.connected_edge.point1[0],edge.connected_edge.point1[1])
                     plt.scatter(edge.connected_edge.point2[0],edge.connected_edge.point2[1])
-                    plt.xlim(0,700)
-                    plt.ylim(0,800)
+                    plt.xlim(0,800)
+                    plt.ylim(0,700)
                     plt.gca().invert_yaxis()
                     plt.show()
                     #  scaling
@@ -335,16 +339,38 @@ class Piece:
                         print("Edge lies along the bottom of the puzzle.")
                         fourth_edge = self.edge_list[(self.edge_list.index(edge) + 1) % len(self.edge_list)]
                         pts_src.append(fourth_edge.point2[::-1].tolist())
+
+                        plt.scatter(fourth_edge.point2[1],fourth_edge.point2[0], color='red', label='Point 2')
+                        plt.scatter(fourth_edge.point1[1],fourth_edge.point1[0], color='blue', label='Point 2')
+                        plt.title("fourth edge")
+                        plt.show()
                         edge_norm = np.linalg.norm(fourth_edge.point2 - fourth_edge.point1)
-                        pts_dst.append([pts_dst[1][0] + int(ratio * edge_norm), pts_dst[1][1]])
+                        pts_dst.append([pts_dst[0][0] , pts_dst[0][1]+ int(ratio * edge_norm)])
         
                     else:  # the left side
                         print("Edge lies along the left side of the puzzle.")
                         fifth_edge = self.edge_list[(self.edge_list.index(edge) - 1) % len(self.edge_list)]
                         pts_src.append(fifth_edge.point1[::-1].tolist())
                         edge_norm = np.linalg.norm(fifth_edge.point2 - fifth_edge.point1)
-                        pts_dst.append([pts_dst[0][0], pts_dst[0][1] + int(ratio * edge_norm)])
+                        pts_dst.append([pts_dst[1][0], pts_dst[1][1] + int(ratio * edge_norm)])
 
+            # I am unrotating the corners here, and plotting onto the propper axis for the canvas, BEWARE!!!!!!!!!
+            for x in pts_dst:
+                plt.scatter(x[1],x[0])
+            plt.xlim(0,700)
+            plt.ylim(0,800)
+            plt.gca().invert_yaxis()
+            plt.title("edge dest")
+            plt.show()
+
+            for x in pts_src:
+                plt.scatter(x[1],x[0])
+            plt.xlim(0,700)
+            plt.ylim(0,800)
+            plt.gca().invert_yaxis()
+            plt.title("edge src")
+            plt.show()
+            
 
             if len(pts_src) < 3 or len(pts_dst) < 3:
                 raise Exception("Not enough points to create affine transformation.")
@@ -358,6 +384,8 @@ class Piece:
 
         pts_src = np.array(pts_src,dtype=np.float32)
         pts_dst = np.array(pts_dst,dtype=np.float32)
+
+        
 
         print(f"\n\nFinal Destination Points: {pts_dst}\n\n")
         M = cv2.getAffineTransform(pts_src,pts_dst)
@@ -381,13 +409,6 @@ class Piece:
 
         # I dont know if i miss-understand, col,row major means that the bottom left is at 0,699, or is it 0,799?
         # NOTE swapped height and width calculations because originally the pieces were being plotted stretched out !
-
-
-        
-        
-
-        
-	    
 
 class Puzzle(object):
     def __init__(self, imgs):
