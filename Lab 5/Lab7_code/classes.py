@@ -365,17 +365,19 @@ class Piece:
                 # For bottom edge:
                 # y coordinate stays at 799
                 # x coordinate extends from pts_dst[1][1] by the scaled edge length
-                new_x = pts_dst[1][1] - int(ratio * edge_norm)
-                pts_dst.append([new_x, copy.copy(pts_dst[1][0])])
+                new_x = pts_dst[1][0] + int(ratio * edge_norm)
+                pts_dst.append([ new_x, pts_dst[1][1]])
                 
                 print(f"Bottom edge placement: extending from x={pts_dst[1][1]} to x={new_x}")
             else:  # Left edge piece
                 prev_edge = self.edge_list[(self.edge_list.index(third_edge) - 1) % 4]
                 edge_norm = np.linalg.norm(prev_edge.point2 - prev_edge.point1)
                 pts_src.append([prev_edge.point1[1], prev_edge.point1[0]])
+
+                new_y = pts_dst[1][1] - int(ratio * edge_norm)
                 
                 # For left edge, we want x=0 and extend y
-                pts_dst.append([pts_dst[1][0] - int(ratio * edge_norm), 0])
+                pts_dst.append([pts_dst[0][0], new_y])
                 
         
             print(f"\nEdge piece {self.idx} connecting to piece {third_edge.connected_edge.parent_piece.idx}")
